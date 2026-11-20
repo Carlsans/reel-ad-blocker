@@ -1,6 +1,6 @@
 {
   "name": "reel-ad-blocker",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Browser extension: mark a Facebook reel as an ad once, block look-alikes from then on.",
   "scripts": {
