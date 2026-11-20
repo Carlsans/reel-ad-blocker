@@ -1,0 +1,144 @@
+<!doctype html>
+<!--
+  A MOCK of a reel viewer, used by test/e2e.mjs. It is NOT real Facebook markup; it imitates the
+  properties the extension depends on: one <video> per reel inside a snap-scrolling list, author
+  link + caption + call-to-action inside each reel, an obfuscated "Sponsored" label, outbound links
+  wrapped in l.facebook.com, and a "Next card" button.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Reels (mock)</title>
+  <style>
+    body { margin: 0; font: 15px sans-serif; background: #111; color: #eee; }
+    [role=banner] { position: fixed; top: 0; left: 0; z-index: 5; padding: 6px 12px; background: #222; }
+    #feed { height: 100vh; overflow-y: auto; scroll-snap-type: y mandatory; }
+    .reel { position: relative; height: 100vh; scroll-snap-align: start; }
+    .stage { position: absolute; inset: 0; display: grid; place-items: center; }
+    video { width: 360px; height: 640px; background: #333; }
+    .overlay { position: absolute; left: 30px; bottom: 40px; width: 360px; }
+    .overlay > * { display: block; }
+    .overlay a { color: #fff; }
+    #next { position: fixed; right: 20px; top: 50%; width: 40px; height: 40px; background: #555; z-index: 5; }
+  </style>
+</head>
+<body>
+  <div role="banner">Home · Reels · Friends · Notifications</div>
+  <div role="main"><div id="feed"></div></div>
+  <div id="next" role="button" aria-label="Next card"></div>
+
+  <script>
+    const wrap = (u) => 'https://l.facebook.com/l.php?u=' + encodeURIComponent(u) + '&h=AT0x';
+    // Hide a few decoy characters inside the word, like Facebook does to the "Sponsored" label.
+    const obfuscated = 'S<span style="display:none">qx</span>pon<span style="display:none">zz</span>sor<span style="display:none">k</span>ed';
+
+    const REELS = [
+      { id: 1, kind: 'organic', page: 'dogvideos', name: 'Dog Videos', caption: 'Wait for the part where he tries to climb the stairs backwards again' },
+      { id: 2, kind: 'ad',      page: 'AcmeShoes', name: 'Acme Shoes', caption: 'Our summer sale is live now with half price on every running shoe in the store', cta: 'Shop now', link: 'https://www.acme-shoes.co.uk/summer' },
+      { id: 3, kind: 'organic', page: 'AcmeShoes', name: 'Acme Shoes', caption: 'Behind the scenes at our workshop this morning with the entire team' },
+      { id: 4, kind: 'ad',      page: 'AcmeShoes', name: 'Acme Shoes', caption: 'Brand new winter boots are finally here for everybody who loves long walks', cta: 'Learn more' },
+      { id: 5, kind: 'ad',      page: 'OtherBrand', name: 'Other Brand', caption: 'Unrelated words about gardening tools and the best soil for tomatoes', cta: 'Shop now', link: 'https://shop.acme-shoes.co.uk/other' },
+      { id: 6, kind: 'organic', page: 'cookingclub', name: 'Cooking Club', caption: 'Five minute pasta that tastes like you spent the whole afternoon cooking' }
+    ];
+
+    // ?labels=0 hides the "Sponsored" label so tests can exercise learned rules instead of the auto-block.
+    const showLabel = new URLSearchParams(location.search).get('labels') !== '0';
+    const feed = document.getElementById('feed');
+    for (const r of REELS) {
+      const sec = document.createElement('section');
+      sec.className = 'reel';
+      sec.dataset.id = r.id;
+      sec.innerHTML = `
+        <div class="stage"><video muted playsinline></video></div>
+        <div class="overlay">
+          <a href="https://www.facebook.com/${r.page}/"><img alt="" width="1" height="1"></a>
+          <a href="https://www.facebook.com/${r.page}/">${r.name}</a>
+          ${r.kind === 'ad' && showLabel ? `<span>${obfuscated}</span>` : ''}
+          <div role="button">Follow</div>
+          <div>${r.caption}</div>
+          ${r.cta ? (r.link ? `<a href="${wrap(r.link)}">${r.cta}</a>` : `<div role="button">${r.cta}</div>`) : ''}
+          <div>${r.id}.2K</div>
+          <div>Original audio · ${r.name}</div>
+        </div>`;
+      feed.appendChild(sec);
+    }
+
+    // Live video so pause/mute can be observed. Like Facebook, only the on-screen reel autoplays.
+    const videos = [...document.querySelectorAll('video')];
+    for (const v of videos) {
+      const c = Object.assign(document.createElement('canvas'), { width: 180, height: 320 });
+      const g = c.getContext('2d'); let t = 0;
+      setInterval(() => { g.fillStyle = `hsl(${(t += 7) % 360} 60% 40%)`; g.fillRect(0, 0, 180, 320); }, 100);
+      v.srcObject = c.captureStream(10);
+    }
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        const v = e.target.querySelector('video');
+        if (e.isIntersecting && e.intersectionRatio > 0.6) {
+          history.replaceState(null, '', '/reel/' + (100 + Number(e.target.dataset.id)));
+          v.muted = false; v.play().catch(() => { v.muted = true; v.play(); });
+        } else v.pause();
+      }
+    }, { root: feed, threshold: [0, 0.6, 1] });
+    document.querySelectorAll('.reel').forEach((s) => io.observe(s));
+
+    // ---- Optional hostile behaviours, modelling what Facebook might do. Off unless asked for:
+    //   ?hostile=nonext,nokeys,noscroll,replay,rebuild
+    //   nonext   no on-screen "Next card" button
+    //   nokeys   ignore script-generated (untrusted) arrow keys
+    //   noscroll the feed refuses to be moved by script; only real input (goTo / the app's own controls) moves it
+    //   replay   the player restarts any on-screen video the moment it is paused
+    //   rebuild  every reel's DOM nodes are replaced by fresh ones twice a second (a framework re-render)
+    const hostile = new Set((new URLSearchParams(location.search).get('hostile') || '').split(','));
+    const stats = window.__stats = { keys: 0, nextClicks: 0, scrollBursts: 0, pauses: 0, plays: 0 };
+
+    let allowScrollUntil = 0, lastTop = 0, lastScrollAt = 0;
+    const allowScroll = () => { allowScrollUntil = performance.now() + 80; };
+    feed.addEventListener('scroll', () => {
+      const now = performance.now();
+      if (hostile.has('noscroll') && now > allowScrollUntil) {
+        if (now - lastScrollAt > 300) stats.scrollBursts++;
+        lastScrollAt = now;
+        feed.scrollTop = lastTop;
+        return;
+      }
+      lastTop = feed.scrollTop;
+    });
+
+    const nextReel = () => { allowScroll(); feed.scrollBy({ top: innerHeight }); };
+    const nextBtn = document.getElementById('next');
+    if (hostile.has('nonext')) nextBtn.remove();
+    else nextBtn.addEventListener('click', () => { stats.nextClicks++; nextReel(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown') return;
+      if (!e.isTrusted) stats.keys++;
+      if (hostile.has('nokeys') && !e.isTrusted) return;
+      nextReel();
+    });
+    window.goTo = (id) => { allowScroll(); document.querySelector(`.reel[data-id="${id}"]`).scrollIntoView(); };
+
+    const onScreen = (el) => {
+      const r = el.getBoundingClientRect();
+      return Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / innerHeight > 0.6;
+    };
+    document.addEventListener('play', () => stats.plays++, true);
+    document.addEventListener('pause', (e) => {
+      stats.pauses++;
+      if (!hostile.has('replay')) return;
+      const v = e.target;
+      setTimeout(() => { const reel = v.closest('.reel'); if (reel && onScreen(reel) && v.paused) v.play().catch(() => {}); }, 20);
+    }, true);
+
+    if (hostile.has('rebuild')) {
+      setInterval(() => {
+        for (const old of document.querySelectorAll('.reel')) {
+          const fresh = old.cloneNode(true);
+          fresh.removeAttribute('data-fbab-blocked'); fresh.removeAttribute('data-fbab-debug');
+          fresh.querySelector('video').srcObject = old.querySelector('video').srcObject;
+          io.unobserve(old); old.replaceWith(fresh); io.observe(fresh);
+        }
+      }, 600);
+    }
+  </script>
+</body>
+</html>

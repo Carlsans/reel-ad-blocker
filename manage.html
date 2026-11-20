@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reel Ad Blocker</title>
+  <link rel="stylesheet" href="manage.css">
+</head>
+<body>
+  <header>
+    <h1>Reel Ad Blocker</h1>
+    <p class="muted">Press <kbd>Alt+X</kbd> (or the red button) on any Facebook reel to mark it as an ad.</p>
+  </header>
+
+  <section class="settings">
+    <label><input type="checkbox" id="enabled"> Block ads (everything below)</label>
+    <label><input type="checkbox" id="blockSponsored"> Automatically block every reel labelled Sponsored</label>
+    <label><input type="checkbox" id="autoSkip"> Skip to the next reel automatically</label>
+    <label><input type="checkbox" id="debug"> Debug mode (outline the detected reel, log what is captured to the page console)</label>
+    <p id="stats" class="muted"></p>
+  </section>
+
+  <section>
+    <h2>Rules <span id="count" class="muted"></span></h2>
+    <p id="empty" class="muted" hidden>No rules yet. Mark a reel as an ad and it shows up here.</p>
+    <ul id="rules"></ul>
+  </section>
+
+  <footer>
+    <button id="export">Export rules</button>
+    <button id="import">Import rules…</button>
+    <input type="file" id="file" accept="application/json" hidden>
+    <button id="clear" class="danger">Delete all</button>
+  </footer>
+
+  <script src="src/matcher.js"></script>
+  <script src="manage.js"></script>
+</body>
+</html>

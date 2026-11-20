@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fff; --fg: #1c1e21; --muted: #65676b; --card: #f0f2f5; --line: #d8dadf;
+  --accent: #d32f2f; --chip: #e4e6eb;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #18191a; --fg: #e4e6eb; --muted: #9a9ca1; --card: #242526; --line: #3a3b3c; --chip: #3a3b3c; }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 16px; min-width: 380px; max-width: 720px;
+  background: var(--bg); color: var(--fg);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { margin: 0 0 4px; font-size: 18px; }
+h2 { margin: 20px 0 8px; font-size: 15px; }
+.muted { color: var(--muted); margin: 0; font-weight: normal; }
+kbd { padding: 1px 6px; border-radius: 4px; background: var(--chip); font: 12px ui-monospace, monospace; }
+
+.settings { display: grid; gap: 6px; margin-top: 14px; }
+.settings label { display: flex; gap: 8px; align-items: flex-start; }
+
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+li.rule { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+li.rule.off { opacity: .55; }
+.row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.title { font-weight: 600; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  padding: 2px 4px 2px 9px; border-radius: 999px; background: var(--chip); font-size: 12px;
+}
+.chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+.chip button { padding: 0 6px; border: 0; background: none; color: var(--muted); font-size: 14px; cursor: pointer; }
+.chip button:hover { color: var(--accent); }
+.meta { font-size: 12px; color: var(--muted); }
+.opt { display: flex; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; }
+
+button { font: inherit; }
+footer { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+footer button, .rule .del {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--card); color: var(--fg); cursor: pointer;
+}
+footer button:hover, .rule .del:hover { border-color: var(--muted); }
+button.danger, .rule .del { color: var(--accent); }
+footer .danger { margin-left: auto; }
